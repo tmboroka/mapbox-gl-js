@@ -1,7 +1,49 @@
-.map-container {
-    height: 60em;
-    width: 60em;
-  }
-  
+.container {
+  display: flex;
+  flex-direction: row;
+}
 
-  
+.directions-container {
+  flex: 1;
+  padding: 16px;
+  background-color: #d3f5e6;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.directions-container button {
+  background-color: #4caf50; /* Green Button Color */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  margin: 4px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.directions-container button:hover {
+  background-color: #45a049; /* Darker Green on Hover */
+}
+
+.route-info {
+  background-color: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.route-info h2 {
+  color: #4caf50; /* Green Color for Mode Indicator */
+}
+
+.route-info p {
+  margin: 8px 0;
+}
+
+.map-container {
+  flex: 2;
+  height: 60em;
+  width: 60em;
+}
