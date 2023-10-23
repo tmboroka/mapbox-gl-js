@@ -23,7 +23,14 @@
 }
 
 .directions-container button:hover {
-  background-color: #45a049; /* Darker Green on Hover */
+  opacity: 0.5; 
+}
+
+.directions-container button.active {
+  background-color: #226847;
+  color: white;
+  border: none;
+  border-radius: 5px;
 }
 
 .route-info {

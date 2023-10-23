@@ -11,14 +11,15 @@ const Map = () => {
   const [lat, setLat] = useState(47.09327);
   const [zoom, setZoom] = useState(12);
   const markers = useRef([]);
-  const transportationMode = useRef("driving");
+  const defaultTransportationMode = "driving";
+  const [transportationMode, setTransportationMode ]= useState(defaultTransportationMode);
   const [cumulativeDistance, setCumulativeDistance] = useState(0);
   const [cumulativeTime, setCumulativeTime] = useState(0);
 
-  const getRoute = async (start, end) => {
-    console.log(transportationMode.current)
+  const getRoute = async (start, end, mode) => {
+    
     const query = await fetch(
-      `https://api.mapbox.com/directions/v5/mapbox/${transportationMode.current}/${start[0]},${start[1]};${end[0]},${end[1]}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
+      `https://api.mapbox.com/directions/v5/mapbox/${mode}/${start[0]},${start[1]};${end[0]},${end[1]}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
       { method: "GET" }
     );
     const json = await query.json();
@@ -26,7 +27,7 @@ const Map = () => {
 
     // Draw the route on the map
     map.current.addLayer({
-      id: `route-${start.join("-")}`,
+      id: `route-${mode}-${start.join("-")}`,
       type: "line",
       source: {
         type: "geojson",
@@ -71,7 +72,10 @@ const Map = () => {
     });
     setCumulativeDistance(0);
     setCumulativeTime(0);
+    setTransportationMode("driving")
   };
+
+  
 
   useEffect(() => {
     if (!map.current) {
@@ -111,7 +115,8 @@ const Map = () => {
 
         // Create routes between markers
         for (let i = 0; i < markers.current.length - 1; i++) {
-          getRoute(markers.current[i].getLngLat().toArray(), markers.current[i + 1].getLngLat().toArray());
+          let mode = transportationMode
+          getRoute(markers.current[i].getLngLat().toArray(), markers.current[i + 1].getLngLat().toArray(), mode);
         }
       });
     }
@@ -130,13 +135,43 @@ const Map = () => {
     }
   };
 
+  const handleTransportationModeChange = (mode) => {
+    setTransportationMode(mode);
+    const mapLayers = map.current.getStyle().layers;
+    mapLayers.forEach(layer => {
+      if (layer.id.startsWith("route-")) {
+        map.current.removeLayer(layer.id);
+      }
+    });
+
+    for (let i = 0; i < markers.current.length - 1; i++) {
+      getRoute(markers.current[i].getLngLat().toArray(), markers.current[i + 1].getLngLat().toArray(), mode);
+    }
+
+  }
+
   return (
     <div className="container">
       <div className="directions-container">
         <div>
-          <button onClick={() => (transportationMode.current = "driving")}>Car</button>
-          <button onClick={() => (transportationMode.current = "walking")}>Walk</button>
-          <button onClick={() => (transportationMode.current = "cycling")}>Bike</button>
+        <button
+            className={transportationMode === "driving" ? "active" : ""}
+            onClick={() => handleTransportationModeChange("driving")}
+          >
+            Car
+          </button>
+          <button
+            className={transportationMode === "walking" ? "active" : ""}
+            onClick={() => handleTransportationModeChange("walking")}
+          >
+            Walk
+          </button>
+          <button
+            className={transportationMode === "cycling" ? "active" : ""}
+            onClick={() => handleTransportationModeChange("cycling")}
+          >
+            Bike
+          </button>
           <button onClick={clearMarkersAndRoutes}>Clear map</button>
         </div>
         <div className="route-info">
