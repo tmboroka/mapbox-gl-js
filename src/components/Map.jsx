@@ -16,6 +16,7 @@ const Map = () => {
   const [cumulativeTime, setCumulativeTime] = useState(0);
 
   const getRoute = async (start, end) => {
+    console.log(transportationMode.current)
     const query = await fetch(
       `https://api.mapbox.com/directions/v5/mapbox/${transportationMode.current}/${start[0]},${start[1]};${end[0]},${end[1]}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
       { method: "GET" }
@@ -40,7 +41,7 @@ const Map = () => {
         "line-cap": "round",
       },
       paint: {
-        "line-color": "#888",
+        "line-color": "#FFAD4A",
         "line-width": 8,
       },
     });
@@ -52,6 +53,24 @@ const Map = () => {
     // Accumulate the distance and time
     setCumulativeDistance((prevDistance) => prevDistance + parseFloat(routeDistance));
     setCumulativeTime((prevTime) => prevTime + routeTime);
+  };
+
+  const clearMarkersAndRoutes = () => {
+    
+    markers.current.forEach(marker => {
+      marker.remove();
+    });
+    markers.current = [];
+  
+    // Remove route layers
+    const mapLayers = map.current.getStyle().layers;
+    mapLayers.forEach(layer => {
+      if (layer.id.startsWith("route-")) {
+        map.current.removeLayer(layer.id);
+      }
+    });
+    setCumulativeDistance(0);
+    setCumulativeTime(0);
   };
 
   useEffect(() => {
@@ -77,7 +96,7 @@ const Map = () => {
 
         const marker = new mapboxgl.Marker({
           draggable: true,
-          color: "#306844",
+          color: "#CB4154",
         })
           .setLngLat([lng, lat])
           .addTo(map.current);
@@ -88,11 +107,11 @@ const Map = () => {
           setLat(lngLat.lat.toFixed(4));
         });
 
-        markers.current.push([lng, lat]);
+        markers.current.push(marker);
 
         // Create routes between markers
         for (let i = 0; i < markers.current.length - 1; i++) {
-          getRoute(markers.current[i], markers.current[i + 1]);
+          getRoute(markers.current[i].getLngLat().toArray(), markers.current[i + 1].getLngLat().toArray());
         }
       });
     }
@@ -118,6 +137,7 @@ const Map = () => {
           <button onClick={() => (transportationMode.current = "driving")}>Car</button>
           <button onClick={() => (transportationMode.current = "walking")}>Walk</button>
           <button onClick={() => (transportationMode.current = "cycling")}>Bike</button>
+          <button onClick={clearMarkersAndRoutes}>Clear map</button>
         </div>
         <div className="route-info">
           <h2>Route Information</h2>
