@@ -1,19 +1,56 @@
 .container {
   display: flex;
   flex-direction: row;
+  height: 100%;
+  margin: 0;
 }
 
 .directions-container {
   flex: 1;
   padding: 16px;
-  background-color: #d3f5e6;
+  background-color: #d8e8ce;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  max-width: 25vw;
+ }
+
+.text-input-container {
+  display: flex;
+  align-items:center;
+  margin-bottom: 200px;
+}
+
+.text-input {
+  flex-grow: 1;
+  padding: 10px;
+}
+
+.button-container {
+  display: flex;
+  justify-content: center;
+
+}
+
+.route-info {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+.route-info h2 {
+  color: #4caf50; 
+}
+
+.route-info p {
+  margin: 8px 0;
+  font-size: 20px;
 }
 
 .directions-container button {
-  background-color: #4caf50; /* Green Button Color */
+  background-color: #4caf50; 
   color: white;
   border: none;
   padding: 10px 20px;
@@ -33,24 +70,13 @@
   border-radius: 5px;
 }
 
-.route-info {
-  background-color: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
-  text-align: center;
-}
 
-.route-info h2 {
-  color: #4caf50; /* Green Color for Mode Indicator */
-}
-
-.route-info p {
-  margin: 8px 0;
-}
 
 .map-container {
   flex: 2;
   height: 60em;
-  width: 60em;
+  max-width: 75vw;
 }
+
+
+

@@ -10,6 +10,8 @@ const Map = () => {
   const latOfVeszprem = 47.09327;
   const defaultZoom = 12;
   const defaultTransportationMode = "driving";
+  const roadWidth = 8;
+  const roadColor = "#FFAD4A";
 
   //initialize map
   const mapContainer = useRef(null);
@@ -28,6 +30,67 @@ const Map = () => {
   const [address, setAddress] = useState("");
   const [addressNotFound, setAddressNotFound] = useState(false);
 
+  useEffect(() => {
+    if (!map.current) {
+      map.current = createMap();
+
+      map.current.on("move", moveMap(map.current));
+
+      map.current.on("click", (e) => {
+        const { lng, lat } = e.lngLat;
+
+        createMarker({ lng, lat });
+
+        drawRoute(markers.current);
+      });
+    }
+  }, []);
+
+  const createMap = () => {
+    return new mapboxgl.Map({
+      container: mapContainer.current,
+      style: "mapbox://styles/mapbox/outdoors-v12",
+      center: [lng, lat],
+      zoom: zoom,
+    });
+  };
+
+  const moveMap = (map) => {
+    setLng(map.getCenter().lng.toFixed(4));
+    setLat(map.getCenter().lat.toFixed(4));
+    setZoom(map.getZoom().toFixed(2));
+  };
+
+  const createMarker = (coordinates) => {
+    const marker = new mapboxgl.Marker({
+      draggable: true,
+      color: "#CB4154",
+    })
+      .setLngLat(coordinates)
+      .addTo(map.current);
+
+    marker.on("dragend", () => {
+      const lngLat = marker.getLngLat();
+      setLng(lngLat.lng.toFixed(4));
+      setLat(lngLat.lat.toFixed(4));
+    });
+
+    markers.current.push(marker);
+    return marker;
+  };
+
+  const drawRoute = (markers) => {
+    if (markers.length > 1) {
+      let lastIndex = markers.length - 1;
+      let mode = transportationMode;
+      getRoute(
+        markers[lastIndex].getLngLat().toArray(),
+        markers[lastIndex - 1].getLngLat().toArray(),
+        mode
+      );
+    }
+  };
+
   const getRoute = async (start, end, mode) => {
     const query = await fetch(
       `https://api.mapbox.com/directions/v5/mapbox/${mode}/${start[0]},${start[1]};${end[0]},${end[1]}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
@@ -35,9 +98,7 @@ const Map = () => {
     );
     const json = await query.json();
     const data = json.routes[0];
-    console.log("lefutok");
 
-    // Draw the route on the map
     map.current.addLayer({
       id: `route-${mode}-${start.join("-")}`,
       type: "line",
@@ -54,28 +115,18 @@ const Map = () => {
         "line-cap": "round",
       },
       paint: {
-        "line-color": "#FFAD4A",
-        "line-width": 8,
+        "line-color": roadColor,
+        "line-width": roadWidth,
       },
     });
 
-    // Update the route info in the state
-    const routeDistance = (data.distance / 1000).toFixed(2); // Always display in kilometers
-    const routeTime = data.duration; // Time in seconds
+    const routeDistance = (data.distance / 1000).toFixed(2);
+    const routeTime = data.duration;
 
-    console.log(
-      "data before: " + cumulativeDistance + " + " + formatTime(cumulativeTime)
-    );
-    console.log("new time: " + routeDistance + " + " + formatTime(routeTime));
-    // Accumulate the distance and time
     setCumulativeDistance(
       (prevDistance) => prevDistance + parseFloat(routeDistance)
     );
     setCumulativeTime((prevTime) => prevTime + routeTime);
-
-    console.log(
-      "data after: " + cumulativeDistance + " + " + formatTime(cumulativeTime)
-    );
   };
 
   const clearMarkersAndRoutes = () => {
@@ -84,7 +135,6 @@ const Map = () => {
     });
     markers.current = [];
 
-    // Remove route layers
     const mapLayers = map.current.getStyle().layers;
     mapLayers.forEach((layer) => {
       if (layer.id.startsWith("route-")) {
@@ -98,55 +148,6 @@ const Map = () => {
     setAddressNotFound(false);
   };
 
-  useEffect(() => {
-    if (!map.current) {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: "mapbox://styles/mapbox/outdoors-v12",
-        center: [lng, lat],
-        zoom: zoom,
-      });
-
-      const nav = new mapboxgl.NavigationControl();
-      map.current.addControl(nav, "top-right");
-
-      map.current.on("move", () => {
-        setLng(map.current.getCenter().lng.toFixed(4));
-        setLat(map.current.getCenter().lat.toFixed(4));
-        setZoom(map.current.getZoom().toFixed(2));
-      });
-
-      map.current.on("click", (e) => {
-        const { lng, lat } = e.lngLat;
-
-        const marker = new mapboxgl.Marker({
-          draggable: true,
-          color: "#CB4154",
-        })
-          .setLngLat([lng, lat])
-          .addTo(map.current);
-
-        marker.on("dragend", () => {
-          const lngLat = marker.getLngLat();
-          setLng(lngLat.lng.toFixed(4));
-          setLat(lngLat.lat.toFixed(4));
-        });
-
-        markers.current.push(marker);
-
-        if (markers.current.length > 1) {
-          let lastIndex = markers.current.length-1;
-          let mode = transportationMode;
-          getRoute(
-            markers.current[lastIndex].getLngLat().toArray(),
-            markers.current[lastIndex-1].getLngLat().toArray(),
-            mode
-          );
-        }
-      });
-    }
-  }, [lng, lat, zoom]);
-
   const geocodeAddress = async () => {
     try {
       const response = await fetch(
@@ -159,60 +160,23 @@ const Map = () => {
 
       const data = await response.json();
 
-      // Check if there are any features (locations) in the response
       if (data.features.length > 0) {
         setAddressNotFound(false);
         const coordinates = data.features[0].center;
 
-        // Place a marker on the map using the coordinates
-        const marker = new mapboxgl.Marker({
-          draggable: true,
-          color: "#CB4154",
-        })
-          .setLngLat(coordinates)
-          .addTo(map.current);
-
-        marker.on("dragend", () => {
-          const lngLat = marker.getLngLat();
-          setLng(lngLat.lng.toFixed(4));
-          setLat(lngLat.lat.toFixed(4));
-        });
-
-        markers.current.push(marker);
+        createMarker(coordinates);
         setAddress("");
 
-        // Create routes between markers
-        for (let i = 0; i < markers.current.length - 1; i++) {
-          let mode = transportationMode;
-          getRoute(
-            markers.current[i].getLngLat().toArray(),
-            markers.current[i + 1].getLngLat().toArray(),
-            mode
-          );
-        }
+        drawRoute(markers.current)
       } else {
         setAddressNotFound(true);
-        console.log("No results found for the entered address.");
       }
     } catch (error) {
       console.error("Error geocoding address:", error);
     }
   };
 
-  const formatTime = (duration) => {
-    if (duration < 3600) {
-      // Less than one hour, display in minutes
-      const minutes = Math.floor(duration / 60);
-      return `${minutes} minute${minutes !== 1 ? "s" : ""}`;
-    } else {
-      // One hour or more, display in hours and minutes
-      const hours = Math.floor(duration / 3600);
-      const minutes = Math.floor((duration % 3600) / 60);
-      return `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${
-        minutes !== 1 ? "s" : ""
-      }`;
-    }
-  };
+  
 
   const handleTransportationModeChange = (mode) => {
     setTransportationMode(mode);
@@ -234,50 +198,66 @@ const Map = () => {
       );
     }
   };
+  
+  const formatTime = (duration) => {
+    if (duration < 3600) {
+      const minutes = Math.floor(duration / 60);
+      return `${minutes} MINUTE${minutes !== 1 ? "S" : ""}`;
+    } else {
+      const hours = Math.floor(duration / 3600);
+      const minutes = Math.floor((duration % 3600) / 60);
+      return `${hours} HOUR${hours !== 1 ? "S" : ""} ${minutes} MINUTE${
+        minutes !== 1 ? "S" : ""
+      }`;
+    }
+  };
 
   return (
     <div className="container">
       <div className="directions-container">
-        <div>
-          <input
-            type="text"
-            placeholder="Enter an address"
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-          />
-          <button onClick={geocodeAddress}>Search</button>
-        </div>
-        {addressNotFound && (
-          <div style={{ color: "red" }}>
-            Address not found. Please enter a valid address.
+        <div className="input-container">
+          <div className="text-input-container">
+            <input
+              type="text"
+              className="text-input"
+              placeholder="ENTER AN ADDRESS"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+            <button onClick={geocodeAddress}>SEARCH</button>
           </div>
-        )}
-        <div>
+          {addressNotFound && (
+            <div style={{ color: "red" }}>
+              Address not found. Please enter a valid address.
+            </div>
+          )}
+        </div>
+        <div className="button-container">
           <button
             className={transportationMode === "driving" ? "active" : ""}
             onClick={() => handleTransportationModeChange("driving")}
           >
-            Car
+            CAR
           </button>
           <button
             className={transportationMode === "walking" ? "active" : ""}
             onClick={() => handleTransportationModeChange("walking")}
           >
-            Walk
+            WALK
           </button>
           <button
             className={transportationMode === "cycling" ? "active" : ""}
             onClick={() => handleTransportationModeChange("cycling")}
           >
-            Bike
+            BIKE
           </button>
-          <button onClick={clearMarkersAndRoutes}>Clear map</button>
         </div>
         <div className="route-info">
-          <h2>Route Information</h2>
-          <p>Distance: {cumulativeDistance.toFixed(2)} km</p>
-          <p>Time: {formatTime(cumulativeTime)}</p>
+          <h2>ROUTE INFORMATION</h2>
+          <p>DISTANCE: {cumulativeDistance.toFixed(2)} KM</p>
+          <p>TIME: {formatTime(cumulativeTime)}</p>
         </div>
+        <button onClick={clearMarkersAndRoutes}>CLEAR MAP</button>
       </div>
       <div ref={mapContainer} className="map-container" />
     </div>
